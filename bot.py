@@ -20,6 +20,16 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+AUDIO_BOT_MESSAGE = (
+    "🎧 <b>Знаю, но не делаю</b>\n\n"
+    "Ты только что честно оценила своё питание — это уже важный шаг.\n\n"
+    "Но часто бывает так: понимаешь что хочешь изменить, а что-то всё равно мешает.\n\n"
+    "Я записала для вас 7 коротких аудио о том, почему разобраться с питанием не получается, "
+    "даже если вы уже много знаете. Эта серия основана на опыте работы с сотнями клиентов, "
+    "которые столкнулись с такой проблемой.\n\n"
+    '👉 <a href="https://t.me/mya_audiobot">Слушать бесплатно</a>'
+)
+
 
 # ── Состояния ──────────────────────────────────────────────────────────────
 
@@ -56,18 +66,6 @@ def subscribe_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def result_keyboard(buttons: list) -> InlineKeyboardMarkup | None:
-    if not buttons:
-        return None
-    rows = [
-        [InlineKeyboardButton(text=b["label"], url=b["url"], callback_data=b.get("cb"))]
-        if b.get("cb") else
-        [InlineKeyboardButton(text=b["label"], url=b["url"])]
-        for b in buttons
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
 def section_header(q_index: int) -> str:
     for start, end, title in SECTIONS:
         if q_index == start:
@@ -90,6 +88,16 @@ async def send_question(chat_id: int, state: FSMContext, q_index: int):
         reply_markup=question_keyboard(q_index),
     )
     await state.update_data(last_msg_id=msg.message_id)
+
+
+def build_result_keyboard(buttons: list) -> InlineKeyboardMarkup | None:
+    if not buttons:
+        return None
+    rows = [
+        [InlineKeyboardButton(text=b["label"], url=b["url"])]
+        for b in buttons
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 # ── Хендлеры ───────────────────────────────────────────────────────────────
@@ -124,7 +132,6 @@ async def check_sub_callback(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_reply_markup(reply_markup=None)
         await start_test(callback.message.chat.id, state, user_id)
     else:
-        # Фиксируем — человек так и не подписался
         log_event(user_id, "not_subscribed")
         await callback.answer(
             "Похоже, ты ещё не подписалась 🙈 Подпишись и нажми кнопку снова!",
@@ -189,43 +196,21 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext):
             parse_mode="HTML",
         )
 
-        # Добавляем callback_data к кнопкам для трекинга
-        buttons = result["buttons"]
-        for b in buttons:
-            if b["url"] == "https://planerka.app/yuliya-minchenko-rnhsmx":
-                b["_track"] = "btn_individual"
-            elif b["url"] == "https://t.me/+jeRJ8g609qllZWQy":
-                b["_track"] = "btn_group"
-
         await bot.send_message(
             callback.message.chat.id,
             result["text"],
             parse_mode="HTML",
-            reply_markup=build_result_keyboard(buttons, user_id),
+            reply_markup=build_result_keyboard(result["buttons"]),
             disable_web_page_preview=True,
         )
 
-
-def build_result_keyboard(buttons: list, user_id: int) -> InlineKeyboardMarkup | None:
-    if not buttons:
-        return None
-    rows = []
-    for b in buttons:
-        track = b.get("_track", "")
-        cb_data = f"track:{track}:{user_id}" if track else None
-        btn = InlineKeyboardButton(text=b["label"], url=b["url"])
-        rows.append([btn])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-@dp.callback_query(F.data.startswith("track:"))
-async def track_button(callback: CallbackQuery):
-    parts = callback.data.split(":")
-    if len(parts) >= 3:
-        event = parts[1]
-        user_id = int(parts[2])
-        log_event(user_id, event)
-    await callback.answer()
+        # Сообщение про аудиобот — отправляется всем
+        await bot.send_message(
+            callback.message.chat.id,
+            AUDIO_BOT_MESSAGE,
+            parse_mode="HTML",
+            disable_web_page_preview=False,
+        )
 
 
 # ── Статистика ─────────────────────────────────────────────────────────────
@@ -236,7 +221,6 @@ async def cmd_stats(message: Message):
         return
 
     s = get_stats()
-
     not_sub = s["start"] - s["test_started"]
 
     text = (
