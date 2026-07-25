@@ -1,21 +1,27 @@
-# ==========================================
-# НАСТРОЙКИ БОТА — редактируйте этот файл
-# ==========================================
+# -*- coding: utf-8 -*-
+import os
+from dotenv import load_dotenv
 
-# Токен вашего бота (получить у @BotFather)
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+load_dotenv()
+
+# Токен бота — берётся из .env файла на сервере
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Канал для проверки подписки
-CHANNEL_USERNAME = "@myanutrition"
-CHANNEL_LINK = "https://t.me/myanutrition"
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@myanutrition")
 
-# Ссылки — индивидуальный разбор
-INDIVIDUAL_TEXT_LINK = "https://myanutrition.ru/firstconsultation"
-INDIVIDUAL_BUTTON_LINK = "https://planerka.app/yuliya-minchenko-rnhsmx"
+# ID администраторов (через запятую)
+ADMIN_IDS = [
+    int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()
+]
 
-# Ссылки — групповое сопровождение
-GROUP_TEXT_LINK = "https://myanutrition.ru/group"
-GROUP_BUTTON_LINK = "https://t.me/+jeRJ8g609qllZWQy"
+# Ссылки
+GROUP_URL = "https://myanutrition.ru/group"
+PODCAST_URL = "https://podcast.ru/1742928597"
 
-# Telegram ID администратора (для команды /stats)
-ADMIN_ID = 7917196527
+# Фото для приветственного сообщения (необязательно)
+START_PHOTO_FILE_ID = os.getenv("START_PHOTO_FILE_ID", "").strip()
+START_PHOTO_PATH = os.getenv("START_PHOTO_PATH", "start_photo.jpg")
+
+# База данных
+DB_PATH = os.getenv("DB_PATH", "stats.db")

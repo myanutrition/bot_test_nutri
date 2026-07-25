@@ -1,66 +1,66 @@
-# Бот «Оцени своё питание» — инструкция по запуску
+# Бот-тест «Мои отношения с едой и телом»
 
 ## Файлы
-```
-nutrition_bot/
-├── bot.py           # Основной файл бота
-├── config.py        # ⚙️ Настройки (токен, ссылки)
-├── questions.py     # Вопросы теста
-├── results.py       # Тексты результатов
-└── requirements.txt
-```
 
-## 1. Установка
+- `main.py` — запуск бота
+- `config.py` — настройки (читает `.env`)
+- `handlers.py` — вся логика: /start, проверка подписки, тест, /stats, /broadcast
+- `quiz_data.py` — вопросы, разборы, результаты
+- `database.py` — статистика (SQLite)
+- `user_state.py` — прогресс прохождения теста
+- `requirements.txt` — зависимости
+- `.env.example` — шаблон настроек
 
-```bash
-pip install -r requirements.txt
-```
-
-## 2. Настройка
-
-Откройте `config.py` и замените:
-
-```python
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"   # ← токен от @BotFather
-```
-
-Остальные ссылки уже вшиты — менять не нужно.
-
-## 3. Запуск
+## Как запустить на сервере
 
 ```bash
-python bot.py
+cd /home/adminvps
+git clone ссылка_на_репозиторий nutrition_quiz
+cd nutrition_quiz
+
+pip3 install -r requirements.txt
+
+cp .env.example .env
+nano .env
 ```
 
-## 4. Что умеет бот
+В `.env` впиши:
+- `BOT_TOKEN` — токен от @BotFather
+- `ADMIN_IDS` — уже стоит твой ID, менять не надо
+- `CHANNEL_USERNAME` — уже стоит @myanutrition
 
-- `/start` — начало работы
-- Проверяет подписку на @myanutrition
-- Проводит тест из 35 вопросов (7 вариантов ответа кнопками)
-- Показывает заголовки разделов при переходе к новому блоку
-- Считает баллы и выдаёт один из 5 результатов
-- В тексте результата — кликабельные ссылки на страницы услуг
-- Кнопки в конце — только релевантные для данного диапазона баллов:
-  - 0–35: без кнопок
-  - 36–120: «Записаться на разбор»
-  - 121–165: «Записаться на разбор» + «Лист ожидания группы»
-  - 166–210: «Лист ожидания группы»
+## Запуск через systemd
 
-## 5. Деплой (опционально)
+```bash
+sudo nano /etc/systemd/system/nutrition_quiz.service
+```
 
-Для постоянной работы запустите на сервере через `screen`, `tmux` или `systemd`.
-
-Пример systemd-сервиса (`/etc/systemd/system/nutrition_bot.service`):
+Вставь:
 ```ini
 [Unit]
 Description=Nutrition Quiz Bot
 After=network.target
 
 [Service]
-WorkingDirectory=/path/to/nutrition_bot
-ExecStart=/usr/bin/python3 bot.py
+WorkingDirectory=/home/adminvps/nutrition_quiz
+ExecStart=/usr/bin/python3 /home/adminvps/nutrition_quiz/main.py
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+Затем:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable nutrition_quiz
+sudo systemctl start nutrition_quiz
+sudo systemctl status nutrition_quiz
+```
+
+## Команды
+
+- `/start` — запуск теста
+- `/stats` — статистика (только для тебя)
+- `/broadcast` — рассылка всем, кто прошёл тест

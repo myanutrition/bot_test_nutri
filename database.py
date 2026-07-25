@@ -1,54 +1,72 @@
+# -*- coding: utf-8 -*-
 import sqlite3
-from datetime import datetime
+import time
+from contextlib import contextmanager
 
-DB_PATH = "analytics.db"
+from config import DB_PATH
+
+EVENT_BOT_OPENED = "bot_opened"
+EVENT_QUIZ_STARTED = "quiz_started"
+EVENT_QUIZ_COMPLETED = "quiz_completed"
+EVENT_GROUP_CLICKED = "group_clicked"
+EVENT_PODCAST_CLICKED = "podcast_clicked"
+
+
+@contextmanager
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
+    with get_conn() as conn:
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 event TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                ts INTEGER NOT NULL
             )
-        """)
-        conn.commit()
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_events_event ON events(event)")
 
 
 def log_event(user_id: int, event: str):
-    with sqlite3.connect(DB_PATH) as conn:
+    with get_conn() as conn:
         conn.execute(
-            "INSERT INTO events (user_id, event, created_at) VALUES (?, ?, ?)",
-            (user_id, event, datetime.now().isoformat())
+            "INSERT INTO events (user_id, event, ts) VALUES (?, ?, ?)",
+            (user_id, event, int(time.time())),
         )
-        conn.commit()
+
+
+def _distinct(event: str, conn) -> int:
+    cur = conn.execute(
+        "SELECT COUNT(DISTINCT user_id) FROM events WHERE event = ?", (event,)
+    )
+    return cur.fetchone()[0]
 
 
 def get_stats() -> dict:
-    with sqlite3.connect(DB_PATH) as conn:
-        def count_unique(event):
-            row = conn.execute(
-                "SELECT COUNT(DISTINCT user_id) FROM events WHERE event = ?",
-                (event,)
-            ).fetchone()
-            return row[0] if row else 0
-
+    with get_conn() as conn:
         return {
-            "start":          count_unique("start"),
-            "not_subscribed": count_unique("not_subscribed"),
-            "test_started":   count_unique("test_started"),
-            "test_finished":  count_unique("test_finished"),
-            "btn_individual": count_unique("btn_individual"),
-            "btn_group":      count_unique("btn_group"),
+            "opened":          _distinct(EVENT_BOT_OPENED, conn),
+            "started":         _distinct(EVENT_QUIZ_STARTED, conn),
+            "completed":       _distinct(EVENT_QUIZ_COMPLETED, conn),
+            "group_clicks":    _distinct(EVENT_GROUP_CLICKED, conn),
+            "podcast_clicks":  _distinct(EVENT_PODCAST_CLICKED, conn),
         }
 
 
-def get_finished_users() -> list:
-    """Возвращает список уникальных user_id всех кто прошёл тест до конца."""
-    with sqlite3.connect(DB_PATH) as conn:
+def get_completed_users() -> list:
+    with get_conn() as conn:
         rows = conn.execute(
-            "SELECT DISTINCT user_id FROM events WHERE event = 'test_finished'"
+            "SELECT DISTINCT user_id FROM events WHERE event = ?",
+            (EVENT_QUIZ_COMPLETED,)
         ).fetchall()
-        return [row[0] for row in rows]
+        return [r[0] for r in rows]
