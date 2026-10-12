@@ -16,7 +16,7 @@ ADMIN_IDS = [
 ]
 
 # Ссылки
-GROUP_URL = "https://myanutrition.ru/group"
+MYSYSTEM_URL = "https://myanutrition.ru/mysystem"
 PODCAST_URL = "https://podcast.ru/1742928597"
 
 # Фото для приветственного сообщения (необязательно)

@@ -94,7 +94,7 @@ def _podcast_kb() -> InlineKeyboardMarkup:
 def _group_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(
-            text="🌿 Узнать о групповом сопровождении",
+            text="🌿 Узнать о программе",
             callback_data="group_click"
         )]]
     )
@@ -222,15 +222,17 @@ async def on_next(callback: CallbackQuery):
             disable_web_page_preview=True,
         )
 
-        # Группа (только для 0–6 баллов)
+        # Программа (только для 0–6 баллов)
         if result["group"]:
             await asyncio.sleep(1)
             group_text = (
-                "🌿 <b>Групповое сопровождение</b>\n\n"
-                "Если хочется не просто понимать, а реально изменить питание — "
-                "я приглашаю вас в групповое сопровождение.\n\n"
-                "Небольшая группа, работа с тем, что мешает именно вам, "
-                "поддержка на каждом шаге."
+                "🌿 <b>Программа «Твоя система питания»</b>\n\n"
+                "Вы уже знаете, как сильно питание влияет на вес, самочувствие "
+                "и отношения с телом. Но знаний недостаточно, чтобы перестать "
+                "переедать, возвращаться к ограничениям и каждый раз начинать заново.\n\n"
+                "Эта самостоятельная программа поможет вам не просто получить "
+                "рекомендации, а собрать свою Систему питания: понятную, гибкую "
+                "и подходящую вашей реальной жизни."
             )
             await callback.message.answer(
                 group_text,
@@ -259,9 +261,9 @@ async def on_group_click(callback: CallbackQuery):
     log_event(callback.from_user.id, EVENT_GROUP_CLICKED)
     await callback.answer()
     await callback.message.answer(
-        "Узнать подробнее и записаться 👇",
+        "Узнать подробнее 👇",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🌿 Перейти на сайт", url=config.GROUP_URL)
+            InlineKeyboardButton(text="🌿 Перейти на сайт", url=config.MYSYSTEM_URL)
         ]])
     )
 
